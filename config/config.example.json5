@@ -1,0 +1,38 @@
+{
+  // 目标聊天配置
+  target: {
+    // 类型: "private" (私聊) 或 "group" (群聊)
+    type: "private",
+    // QQ号 (私聊) 或 群号 (群聊)
+    id: 123456789,
+  },
+
+  // OneBot 配置 (NapCatQQ / Lagrange 等)
+  onebot: {
+    // OneBot HTTP API 地址
+    httpUrl: "http://localhost:3000",
+    // 访问令牌 (可选，与 OneBot 配置一致)
+    // accessToken: "your-token",
+    // Webhook 接收路径
+    webhookPath: "/onebot",
+  },
+
+  // HTTP 服务器配置
+  server: {
+    port: 3001,
+    host: "0.0.0.0",
+  },
+
+  // 日志配置
+  logging: {
+    // 日志级别: debug, info, warn, error
+    level: "info",
+    // 文件日志
+    file: {
+      enabled: true,
+      directory: "./logs",
+    },
+    // 控制台格式: pretty 或 json
+    consoleFormat: "pretty",
+  },
+}
