@@ -35,4 +35,16 @@
     // 控制台格式: pretty 或 json
     consoleFormat: "pretty",
   },
+
+  // 消息处理管道配置
+  pipeline: {
+    // Debounce 等待时间（毫秒）
+    // 收到最后一条消息后等待这么长时间再触发处理
+    debounceMs: 3000,
+    // 最大等待时间（毫秒）
+    // 收到第一条消息后最多等待这么长时间必须触发处理
+    maxWaitMs: 10000,
+    // 是否在处理多条消息时发送进度反馈
+    progressFeedback: true,
+  },
 }

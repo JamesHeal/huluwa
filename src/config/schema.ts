@@ -27,11 +27,18 @@ export const LoggingSchema = z.object({
   consoleFormat: z.enum(['pretty', 'json']).default('pretty'),
 });
 
+export const PipelineSchema = z.object({
+  debounceMs: z.number().int().min(100).max(30000).default(3000),
+  maxWaitMs: z.number().int().min(1000).max(60000).default(10000),
+  progressFeedback: z.boolean().default(true),
+});
+
 export const ConfigSchema = z.object({
   target: TargetSchema,
   onebot: OneBotSchema,
   server: ServerSchema.default({}),
   logging: LoggingSchema.default({}),
+  pipeline: PipelineSchema.default({}),
 });
 
 export type Target = z.infer<typeof TargetSchema>;
@@ -39,4 +46,5 @@ export type OneBotConfig = z.infer<typeof OneBotSchema>;
 export type ServerConfig = z.infer<typeof ServerSchema>;
 export type LogFileConfig = z.infer<typeof LogFileSchema>;
 export type LoggingConfig = z.infer<typeof LoggingSchema>;
+export type PipelineConfig = z.infer<typeof PipelineSchema>;
 export type Config = z.infer<typeof ConfigSchema>;

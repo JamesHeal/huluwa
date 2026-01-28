@@ -1,14 +1,14 @@
 # 开发进度
 
-> 最后更新: 2026-01-28
+> 最后更新: 2026-01-29
 
 ---
 
 ## 当前状态
 
-**Phase 1: 基础框架** — ✅ 已完成
+**Phase 2: 消息处理 Pipeline** — ✅ 已完成
 
-Bot 已能在 QQ 群中收发消息，收到消息后自动回复 "收到: xxx"。
+Bot 现在支持消息缓冲、Debounce 触发和多消息聚合。
 
 ---
 
@@ -61,7 +61,25 @@ Bot 已能在 QQ 群中收发消息，收到消息后自动回复 "收到: xxx"�
 - 文件输出：JSON 格式，便于分析
 - 子 Logger：支持 `logger.child('context')` 创建带上下文的日志器
 
-### 4. OneBot 集成（QQ）
+### 4. 消息处理 Pipeline
+
+| 文件 | 功能 |
+|------|------|
+| `src/pipeline/message-queue.ts` | FIFO 消息队列 |
+| `src/pipeline/debounce-controller.ts` | Debounce 控制器，时间间隔触发 |
+| `src/pipeline/message-aggregator.ts` | 多消息聚合，保留发送者信息 |
+
+**Debounce 策略：**
+- `debounceMs`：收到最后一条消息后等待时间（默认 3 秒）
+- `maxWaitMs`：收到第一条消息后最长等待时间（默认 10 秒）
+- 进度反馈：多条消息时发送 "正在处理..." 提示
+
+**消息聚合：**
+- 统计参与者和消息数量
+- 格式化对话文本：`[昵称] 消息内容`
+- 保留时间范围信息
+
+### 5. OneBot 集成（QQ）
 
 | 文件 | 功能 |
 |------|------|
@@ -131,6 +149,11 @@ huluwa/
 │   │   ├── message-normalizer.ts
 │   │   ├── types.ts
 │   │   └── errors.ts
+│   ├── pipeline/
+│   │   ├── index.ts
+│   │   ├── message-queue.ts     # 消息队列
+│   │   ├── debounce-controller.ts # Debounce 控制器
+│   │   └── message-aggregator.ts  # 消息聚合器
 │   ├── server/
 │   │   ├── index.ts
 │   │   └── server.ts            # HTTP 服务器
@@ -231,6 +254,7 @@ pnpm start
 | 里程碑 | 状态 | 说明 |
 |--------|------|------|
 | M1: 能说话 | ✅ | Bot 能在 QQ 群中收发消息 |
+| M1.5: 会等待 | ✅ | 消息 Debounce、聚合 |
 | M2: 会思考 | ⏳ | 待开发：AI 对话能力 |
 | M3: 有记忆 | ⏳ | 待开发：上下文管理 |
 | M4: 能动手 | ⏳ | 待开发：工具调用 |
