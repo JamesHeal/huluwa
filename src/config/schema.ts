@@ -71,6 +71,13 @@ export const ToolsSchema = z.object({
   webSearch: WebSearchSchema.default({}),
 });
 
+export const WebUISchema = z.object({
+  enabled: z.boolean().default(false),
+  basePath: z.string().startsWith('/').default('/ui'),
+  apiPath: z.string().startsWith('/').default('/api/v1'),
+  wsPath: z.string().startsWith('/').default('/ws'),
+});
+
 export const LoggingSchema = z.object({
   level: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   file: LogFileSchema.default({}),
@@ -114,6 +121,7 @@ export const ConfigSchema = z.object({
   ai: AISchema,
   memory: MemorySchema.default({}),
   tools: ToolsSchema.default({}),
+  webui: WebUISchema.default({}),
 });
 
 export type Target = z.infer<typeof TargetSchema>;
@@ -131,4 +139,5 @@ export type MemoryConfig = z.infer<typeof MemorySchema>;
 export type ToolsCacheConfig = z.infer<typeof ToolsCacheSchema>;
 export type WebSearchConfig = z.infer<typeof WebSearchSchema>;
 export type ToolsConfig = z.infer<typeof ToolsSchema>;
+export type WebUIConfig = z.infer<typeof WebUISchema>;
 export type Config = z.infer<typeof ConfigSchema>;

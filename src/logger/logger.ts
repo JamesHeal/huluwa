@@ -1,7 +1,14 @@
+import { EventEmitter } from 'node:events';
 import type { LoggingConfig } from '../config/schema.js';
 import { FileTransport } from './file-transport.js';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+// Global event emitter for log streaming
+export const logEmitter = new EventEmitter();
+
+// Prevent memory leak warnings for many listeners
+logEmitter.setMaxListeners(100);
 
 const LOG_LEVELS: Record<LogLevel, number> = {
   debug: 0,
@@ -89,6 +96,9 @@ export class Logger {
 
     this.writeToConsole(entry);
     this.writeToFile(entry);
+
+    // Emit log entry for real-time streaming
+    logEmitter.emit('log', entry);
   }
 
   private writeToConsole(entry: LogEntry): void {

@@ -14,6 +14,7 @@ import { createAgentGraph, type CompiledAgentGraph } from './agent/index.js';
 import { ConversationMemory, createEmbeddingFunction } from './memory/index.js';
 import { ToolRegistry } from './tools/index.js';
 import { registerBuiltinTools } from './tools/builtin/index.js';
+import { initWebUI, type WebUIModule } from './web/index.js';
 
 export class App {
   private readonly config: Config;
@@ -25,6 +26,7 @@ export class App {
   private readonly httpServer: HttpServer;
   private readonly conversationMemory: ConversationMemory;
   private readonly agentGraph: CompiledAgentGraph;
+  private webUI: WebUIModule | null = null;
   private isShuttingDown = false;
 
   constructor(config: Config, logger: Logger) {
@@ -82,6 +84,15 @@ export class App {
 
     this.setupWebhookRoute();
     this.setupMessageHandler();
+
+    // Initialize Web UI module
+    if (config.webui.enabled) {
+      this.webUI = initWebUI({
+        server: this.httpServer,
+        config,
+        logger,
+      });
+    }
   }
 
   private setupWebhookRoute(): void {
@@ -282,6 +293,11 @@ export class App {
 
     this.isShuttingDown = true;
     this.logger.info('Stopping application');
+
+    // Shutdown Web UI
+    if (this.webUI) {
+      this.webUI.shutdown();
+    }
 
     // 清空消息队列
     this.messageQueue.clear();

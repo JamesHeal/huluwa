@@ -19,10 +19,13 @@ dependencies:
     version: 1.1.2(@langchain/core@1.1.17)(zod@3.25.76)
   '@langchain/openai':
     specifier: ^1.2.3
-    version: 1.2.3(@langchain/core@1.1.17)
+    version: 1.2.3(@langchain/core@1.1.17)(ws@8.19.0)
   json5:
     specifier: ^2.2.3
     version: 2.2.3
+  ws:
+    specifier: ^8.19.0
+    version: 8.19.0
   zod:
     specifier: ^3.25.32
     version: 3.25.76
@@ -31,6 +34,9 @@ devDependencies:
   '@types/node':
     specifier: ^22.0.0
     version: 22.0.0
+  '@types/ws':
+    specifier: ^8.18.1
+    version: 8.18.1
   tsx:
     specifier: ^4.19.0
     version: 4.19.0
@@ -558,7 +564,6 @@ packages:
   /@lancedb/lancedb@0.23.0(apache-arrow@18.1.0):
     resolution: {integrity: sha512-aYrIoEG24AC+wILCL57Ius/Y4yU+xFHDPKLvmjzzN4byAjzeIGF0TC86S5RBt4Ji+dxS7yIWV5Q/gE5/fybIFQ==}
     engines: {node: '>= 18'}
-    cpu: [x64, arm64]
     os: [darwin, linux, win32]
     peerDependencies:
       apache-arrow: '>=15.0.0 <=18.1.0'
@@ -659,7 +664,7 @@ packages:
       - react-dom
     dev: false
 
-  /@langchain/openai@1.2.3(@langchain/core@1.1.17):
+  /@langchain/openai@1.2.3(@langchain/core@1.1.17)(ws@8.19.0):
     resolution: {integrity: sha512-+bKR4+Obz5a/NHEw0bAm3f/s4k0cXc/g46ZRRXqjcyDYP+9wFarItvGNn6DEEk5S7pGp1QqApAQNt9IZk1Ic1Q==}
     engines: {node: '>=20'}
     peerDependencies:
@@ -667,7 +672,7 @@ packages:
     dependencies:
       '@langchain/core': 1.1.17
       js-tiktoken: 1.0.21
-      openai: 6.16.0(zod@3.25.76)
+      openai: 6.16.0(ws@8.19.0)(zod@3.25.76)
       zod: 3.25.76
     transitivePeerDependencies:
       - ws
@@ -910,6 +915,12 @@ packages:
   /@types/uuid@10.0.0:
     resolution: {integrity: sha512-7gqG38EyHgyP1S+7+xomFtL+ZNHcKv6DwNaCZmJmo1vgMugyF3TCnXVg4t1uk89mLNwnLtnY3TpOpCOyp1/xHQ==}
     dev: false
+
+  /@types/ws@8.18.1:
+    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
+    dependencies:
+      '@types/node': 22.0.0
+    dev: true
 
   /@vitest/expect@2.1.0:
     resolution: {integrity: sha512-N3/xR4fSu0+6sVZETEtPT1orUs2+Y477JOXTcU3xKuu3uBlsgbD7/7Mz2LZ1Jr1XjwilEWlrIgSCj4N1+5ZmsQ==}
@@ -1316,7 +1327,7 @@ packages:
     hasBin: true
     dev: true
 
-  /openai@6.16.0(zod@3.25.76):
+  /openai@6.16.0(ws@8.19.0)(zod@3.25.76):
     resolution: {integrity: sha512-fZ1uBqjFUjXzbGc35fFtYKEOxd20kd9fDpFeqWtsOZWiubY8CZ1NAlXHW3iathaFvqmNtCWMIsosCuyeI7Joxg==}
     hasBin: true
     peerDependencies:
@@ -1328,6 +1339,7 @@ packages:
       zod:
         optional: true
     dependencies:
+      ws: 8.19.0
       zod: 3.25.76
     dev: false
 
@@ -1683,6 +1695,19 @@ packages:
   /wordwrapjs@5.1.1:
     resolution: {integrity: sha512-0yweIbkINJodk27gX9LBGMzyQdBDan3s/dEAiwBOj+Mf0PPyWL6/rikalkv8EeD0E8jm4o5RXEOrFTP3NXbhJg==}
     engines: {node: '>=12.17'}
+    dev: false
+
+  /ws@8.19.0:
+    resolution: {integrity: sha512-blAT2mjOEIi0ZzruJfIhb3nps74PRWTCz1IjglWEEpQl5XS/UNama6u2/rjFkDDouqr4L67ry+1aGIALViWjDg==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
     dev: false
 
   /zod@3.25.76:

@@ -10,7 +10,7 @@
   // OneBot 配置 (NapCatQQ / Lagrange 等)
   onebot: {
     // OneBot HTTP API 地址
-    httpUrl: "http://localhost:3000",
+    httpUrl: "http://localhost:6700",
     // 访问令牌 (可选，与 OneBot 配置一致)
     // accessToken: "your-token",
     // Webhook 接收路径
@@ -144,5 +144,17 @@
       // 搜索返回的最大结果数
       searchTopK: 5,
     },
+  },
+
+  // Web UI 配置
+  webui: {
+    // 是否启用 Web UI（监控界面）
+    enabled: false,
+    // Web UI 访问路径
+    basePath: "/ui",
+    // REST API 路径
+    apiPath: "/api/v1",
+    // WebSocket 路径
+    wsPath: "/ws",
   },
 }
