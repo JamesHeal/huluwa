@@ -12,6 +12,7 @@ function createTestMessage(id: number, text: string): NormalizedMessage {
     text,
     nickname: 'TestUser',
     timestamp: new Date(),
+    attachments: [],
   };
 }
 

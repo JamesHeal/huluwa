@@ -6,6 +6,7 @@ export {
   OneBotConnectionError,
   OneBotApiError,
 } from './errors.js';
+export { guessMimeType } from './message-normalizer.js';
 export type {
   OneBotSender,
   OneBotMessage,
@@ -15,4 +16,6 @@ export type {
   OneBotSendMessageResponse,
   OneBotLoginInfo,
   OneBotGroupInfo,
+  AttachmentType,
+  Attachment,
 } from './types.js';

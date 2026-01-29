@@ -5,6 +5,7 @@ import type {
   OneBotSendMessageResponse,
   OneBotLoginInfo,
   OneBotGroupInfo,
+  Attachment,
 } from './types.js';
 
 export interface OneBotClientConfig {
@@ -124,5 +125,64 @@ export class OneBotClient {
       group_id: groupId,
     });
     return result;
+  }
+
+  /**
+   * 通过 HTTP 下载文件并返回 base64 编码数据
+   */
+  async downloadFile(url: string): Promise<string> {
+    this.logger.debug('Downloading file', { url: url.substring(0, 100) });
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+      }
+
+      const buffer = await response.arrayBuffer();
+      const base64 = Buffer.from(buffer).toString('base64');
+
+      this.logger.debug('File downloaded', { url: url.substring(0, 100), size: buffer.byteLength });
+      return base64;
+    } catch (error) {
+      throw new OneBotConnectionError(
+        `Failed to download file from ${url.substring(0, 100)}: ${error instanceof Error ? error.message : String(error)}`,
+        error
+      );
+    }
+  }
+
+  /**
+   * 并发下载多个附件，失败不阻塞其他下载
+   *
+   * 就地修改附件对象的 base64Data 字段
+   */
+  async downloadAttachments(attachments: Attachment[]): Promise<void> {
+    if (attachments.length === 0) {
+      return;
+    }
+
+    this.logger.info('Downloading attachments', { count: attachments.length });
+
+    const results = await Promise.allSettled(
+      attachments.map(async (attachment) => {
+        try {
+          attachment.base64Data = await this.downloadFile(attachment.url);
+        } catch (error) {
+          this.logger.warn('Failed to download attachment', {
+            filename: attachment.filename,
+            type: attachment.type,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      })
+    );
+
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+    this.logger.info('Attachments download complete', {
+      total: attachments.length,
+      succeeded,
+      failed: attachments.length - succeeded,
+    });
   }
 }

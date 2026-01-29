@@ -9,6 +9,8 @@ import {
 } from './pipeline/index.js';
 import { HttpServer } from './server/server.js';
 import type { OneBotEvent } from './onebot/types.js';
+import { ModelRegistry } from './ai/index.js';
+import { createAgentGraph, type CompiledAgentGraph } from './agent/index.js';
 
 export class App {
   private readonly config: Config;
@@ -18,6 +20,7 @@ export class App {
   private readonly debounceController: DebounceController;
   private readonly messageAggregator: MessageAggregator;
   private readonly httpServer: HttpServer;
+  private readonly agentGraph: CompiledAgentGraph;
   private isShuttingDown = false;
 
   constructor(config: Config, logger: Logger) {
@@ -51,6 +54,14 @@ export class App {
     this.messageAggregator = new MessageAggregator();
 
     this.httpServer = new HttpServer(config.server, logger);
+
+    // 创建模型注册表和 Agent Graph
+    const models = new ModelRegistry(config.ai, logger);
+
+    this.agentGraph = createAgentGraph({
+      models,
+      logger,
+    });
 
     this.setupWebhookRoute();
     this.setupMessageHandler();
@@ -106,7 +117,13 @@ export class App {
       count: aggregated.count,
       participants: aggregated.participants.map((p) => p.nickname),
       textPreview: aggregated.plainText.substring(0, 100),
+      attachmentCount: aggregated.attachments.length,
     });
+
+    // 下载附件（聚合后、AI 处理前）
+    if (aggregated.attachments.length > 0) {
+      await this.oneBotClient.downloadAttachments(aggregated.attachments);
+    }
 
     // 发送进度反馈
     if (this.config.pipeline.progressFeedback && aggregated.count > 1) {
@@ -163,21 +180,26 @@ export class App {
   private async processMessages(
     aggregated: AggregatedMessages
   ): Promise<string> {
-    // TODO: Phase 3 将在此处集成 AI Agent Pipeline
-    // 当前简单回复收到的内容
+    try {
+      this.logger.debug('Running agent graph', {
+        messageCount: aggregated.count,
+      });
 
-    if (aggregated.count === 1) {
-      return `收到: ${aggregated.plainText}`;
+      const result = await this.agentGraph.invoke({
+        input: aggregated,
+      });
+
+      if (result.error) {
+        this.logger.warn('Agent graph returned error', { error: result.error });
+      }
+
+      return result.response ?? '抱歉，我没有生成回复。';
+    } catch (error) {
+      this.logger.error('Agent graph execution failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return '抱歉，处理消息时出错了。';
     }
-
-    // 多条消息时，显示摘要
-    const participantNames = aggregated.participants
-      .map((p) => p.nickname)
-      .join('、');
-    return (
-      `收到 ${aggregated.count} 条消息，来自: ${participantNames}\n` +
-      `内容:\n${aggregated.formattedText}`
-    );
   }
 
   async start(): Promise<void> {

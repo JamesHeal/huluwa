@@ -6,9 +6,9 @@
 
 ## 当前状态
 
-**Phase 2: 消息处理 Pipeline** — ✅ 已完成
+**Phase 3: Multi-Agent Pipeline** — ✅ 已完成
 
-Bot 现在支持消息缓冲、Debounce 触发和多消息聚合。
+Bot 现在具备 AI 对话能力，使用 LangGraph 实现多 Agent 工作流。
 
 ---
 
@@ -79,7 +79,40 @@ Bot 现在支持消息缓冲、Debounce 触发和多消息聚合。
 - 格式化对话文本：`[昵称] 消息内容`
 - 保留时间范围信息
 
-### 5. OneBot 集成（QQ）
+### 5. AI Provider 抽象
+
+| 文件 | 功能 |
+|------|------|
+| `src/ai/types.ts` | AI 类型定义 |
+| `src/ai/provider.ts` | LangChain 模型工厂 |
+
+**支持的 Provider：**
+- Anthropic (Claude) ✅
+- OpenAI (待实现)
+
+### 6. Multi-Agent Pipeline
+
+| 文件 | 功能 |
+|------|------|
+| `src/agent/state.ts` | LangGraph 状态定义 |
+| `src/agent/graph.ts` | Agent 工作流图 |
+| `src/agent/nodes/summary.ts` | 消息总结节点 |
+| `src/agent/nodes/intent.ts` | 意图识别节点 |
+| `src/agent/nodes/router.ts` | 路由节点 |
+| `src/agent/nodes/chat-executor.ts` | 对话执行节点 |
+
+**工作流程：**
+```
+Input → Summary → Intent → Router → Executor → Response
+```
+
+**节点说明：**
+- **Summary**：多条消息时生成摘要
+- **Intent**：识别意图（chat/question/command）
+- **Router**：根据意图选择执行器
+- **Chat Executor**：生成对话回复
+
+### 7. OneBot 集成（QQ）
 
 | 文件 | 功能 |
 |------|------|
@@ -133,6 +166,19 @@ huluwa/
 ├── src/
 │   ├── index.ts                 # 入口文件
 │   ├── app.ts                   # 应用主类
+│   ├── ai/
+│   │   ├── index.ts
+│   │   ├── types.ts             # AI 类型定义
+│   │   └── provider.ts          # LangChain 模型工厂
+│   ├── agent/
+│   │   ├── index.ts
+│   │   ├── state.ts             # LangGraph 状态定义
+│   │   ├── graph.ts             # Agent 工作流图
+│   │   └── nodes/
+│   │       ├── summary.ts       # 消息总结节点
+│   │       ├── intent.ts        # 意图识别节点
+│   │       ├── router.ts        # 路由节点
+│   │       └── chat-executor.ts # 对话执行节点
 │   ├── config/
 │   │   ├── index.ts
 │   │   ├── schema.ts            # Zod Schema
@@ -175,6 +221,9 @@ huluwa/
 ```json
 {
   "dependencies": {
+    "@langchain/anthropic": "^1.3.12",
+    "@langchain/core": "^1.1.17",
+    "@langchain/langgraph": "^1.1.2",
     "json5": "^2.2.3",
     "zod": "^3.23.8"
   },
@@ -255,7 +304,7 @@ pnpm start
 |--------|------|------|
 | M1: 能说话 | ✅ | Bot 能在 QQ 群中收发消息 |
 | M1.5: 会等待 | ✅ | 消息 Debounce、聚合 |
-| M2: 会思考 | ⏳ | 待开发：AI 对话能力 |
+| M2: 会思考 | ✅ | LangGraph 多 Agent 对话 Pipeline |
 | M3: 有记忆 | ⏳ | 待开发：上下文管理 |
 | M4: 能动手 | ⏳ | 待开发：工具调用 |
 | M5: 可管理 | ⏳ | 待开发：Web UI |

@@ -47,4 +47,52 @@
     // 是否在处理多条消息时发送进度反馈
     progressFeedback: true,
   },
+
+  // AI 配置 — 支持配置多个 provider，不同 agent 节点可使用不同模型
+  ai: {
+    // 默认使用的 provider 名称（必须是 providers 中的 key）
+    default: "claude",
+
+    providers: {
+      // Anthropic Claude
+      claude: {
+        provider: "anthropic",
+        model: "claude-sonnet-4-20250514",
+        apiKey: "${ANTHROPIC_API_KEY}",
+        // baseUrl: "https://api.anthropic.com",  // 可选，自定义 API 地址
+        temperature: 0.7,
+        maxTokens: 4096,
+      },
+
+      // 以下为可选 provider，按需取消注释
+
+      // OpenAI
+      // openai: {
+      //   provider: "openai",
+      //   model: "gpt-4o",
+      //   apiKey: "${OPENAI_API_KEY}",
+      // },
+
+      // GLM (智谱)
+      // glm: {
+      //   provider: "glm",
+      //   model: "glm-4-flash",
+      //   apiKey: "${GLM_API_KEY}",
+      // },
+
+      // MiniMax
+      // minimax: {
+      //   provider: "minimax",
+      //   model: "MiniMax-M1",
+      //   apiKey: "${MINIMAX_API_KEY}",
+      // },
+
+      // Gemini
+      // gemini: {
+      //   provider: "gemini",
+      //   model: "gemini-2.0-flash",
+      //   apiKey: "${GEMINI_API_KEY}",
+      // },
+    },
+  },
 }

@@ -33,12 +33,35 @@ export const PipelineSchema = z.object({
   progressFeedback: z.boolean().default(true),
 });
 
+export const ProviderConfigSchema = z.object({
+  provider: z.enum(['anthropic', 'openai', 'glm', 'minimax', 'gemini']),
+  model: z.string(),
+  apiKey: z.string(),
+  baseUrl: z.string().url().optional(),
+  temperature: z.number().min(0).max(2).default(0.7),
+  maxTokens: z.number().int().min(1).max(100000).default(4096),
+});
+
+export const AISchema = z
+  .object({
+    default: z.string(),
+    providers: z.record(z.string(), ProviderConfigSchema),
+  })
+  .refine(
+    (data) => data.default in data.providers,
+    (data) => ({
+      message: `Default provider "${data.default}" not found in providers`,
+      path: ['default'],
+    })
+  );
+
 export const ConfigSchema = z.object({
   target: TargetSchema,
   onebot: OneBotSchema,
   server: ServerSchema.default({}),
   logging: LoggingSchema.default({}),
   pipeline: PipelineSchema.default({}),
+  ai: AISchema,
 });
 
 export type Target = z.infer<typeof TargetSchema>;
@@ -47,4 +70,6 @@ export type ServerConfig = z.infer<typeof ServerSchema>;
 export type LogFileConfig = z.infer<typeof LogFileSchema>;
 export type LoggingConfig = z.infer<typeof LoggingSchema>;
 export type PipelineConfig = z.infer<typeof PipelineSchema>;
+export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
+export type AIConfig = z.infer<typeof AISchema>;
 export type Config = z.infer<typeof ConfigSchema>;

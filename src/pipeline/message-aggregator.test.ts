@@ -1,13 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { MessageAggregator } from './message-aggregator.js';
 import type { NormalizedMessage } from '../onebot/message-normalizer.js';
+import type { Attachment } from '../onebot/types.js';
 
 function createTestMessage(
   id: number,
   text: string,
   userId: number,
   nickname: string,
-  timestamp?: number
+  timestamp?: number,
+  attachments: Attachment[] = []
 ): NormalizedMessage {
   return {
     messageId: id,
@@ -18,6 +20,7 @@ function createTestMessage(
     text,
     nickname,
     timestamp: new Date(timestamp ?? Date.now()),
+    attachments,
   };
 }
 
@@ -92,5 +95,58 @@ describe('MessageAggregator', () => {
 
     expect(result.startTime.getTime()).toBe(1000);
     expect(result.endTime.getTime()).toBe(5000);
+  });
+
+  it('should aggregate attachments from all messages', () => {
+    const att1: Attachment = {
+      type: 'image',
+      filename: 'photo.jpg',
+      url: 'http://example.com/photo.jpg',
+      mimeType: 'image/jpeg',
+    };
+    const att2: Attachment = {
+      type: 'file',
+      filename: 'doc.pdf',
+      url: 'http://example.com/doc.pdf',
+      mimeType: 'application/pdf',
+    };
+
+    const msgs = [
+      createTestMessage(1, 'look at this', 111, 'Alice', 1000, [att1]),
+      createTestMessage(2, 'and this', 222, 'Bob', 2000, [att2]),
+    ];
+
+    const result = aggregator.aggregate(msgs);
+
+    expect(result.attachments).toHaveLength(2);
+    expect(result.attachments[0]!.type).toBe('image');
+    expect(result.attachments[1]!.type).toBe('file');
+  });
+
+  it('should annotate attachments in formattedText', () => {
+    const att: Attachment = {
+      type: 'image',
+      filename: 'photo.jpg',
+      url: 'http://example.com/photo.jpg',
+      mimeType: 'image/jpeg',
+    };
+
+    const msgs = [
+      createTestMessage(1, 'look', 111, 'Alice', 1000, [att]),
+    ];
+
+    const result = aggregator.aggregate(msgs);
+
+    expect(result.formattedText).toBe('[Alice] look [image: photo.jpg]');
+  });
+
+  it('should return empty attachments when no messages have attachments', () => {
+    const msgs = [
+      createTestMessage(1, 'hello', 111, 'Alice', 1000),
+    ];
+
+    const result = aggregator.aggregate(msgs);
+
+    expect(result.attachments).toHaveLength(0);
   });
 });

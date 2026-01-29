@@ -66,3 +66,16 @@ export interface OneBotGroupInfo {
   member_count: number;
   max_member_count: number;
 }
+
+// 多媒体附件类型
+
+export type AttachmentType = 'image' | 'file' | 'audio' | 'video';
+
+export interface Attachment {
+  type: AttachmentType;
+  filename: string;
+  url: string;
+  mimeType: string;
+  /** 下载后填充，base64 编码的文件内容 */
+  base64Data?: string;
+}

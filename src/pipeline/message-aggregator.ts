@@ -1,4 +1,5 @@
 import type { NormalizedMessage } from '../onebot/message-normalizer.js';
+import type { Attachment } from '../onebot/types.js';
 
 /**
  * 聚合后的消息结构
@@ -39,6 +40,11 @@ export interface AggregatedMessages {
    * 纯文本拼接（不含发送者信息）
    */
   plainText: string;
+
+  /**
+   * 所有消息中的附件（聚合）
+   */
+  attachments: Attachment[];
 
   /**
    * 是否群聊
@@ -100,10 +106,20 @@ export class MessageAggregator {
       messageCount: data.count,
     }));
 
-    // 格式化对话文本
-    const formattedLines = messages.map(
-      (msg) => `[${msg.nickname}] ${msg.text}`
-    );
+    // 收集所有附件
+    const attachments: Attachment[] = [];
+    for (const msg of messages) {
+      attachments.push(...msg.attachments);
+    }
+
+    // 格式化对话文本（含附件标注）
+    const formattedLines = messages.map((msg) => {
+      let line = `[${msg.nickname}] ${msg.text}`;
+      for (const att of msg.attachments) {
+        line += ` [${att.type}: ${att.filename}]`;
+      }
+      return line;
+    });
     const formattedText = formattedLines.join('\n');
 
     // 纯文本拼接
@@ -117,6 +133,7 @@ export class MessageAggregator {
       participants,
       formattedText,
       plainText,
+      attachments,
       isGroup: firstMessage.isGroup,
     };
 
