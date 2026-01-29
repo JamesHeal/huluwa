@@ -4,6 +4,7 @@ import type { MessageContent, ContentBlock } from '@langchain/core/messages';
 import type { AgentStateType } from '../state.js';
 import type { Attachment } from '../../onebot/types.js';
 import type { ConversationMemory } from '../../memory/index.js';
+import { extractTargetId } from '../../memory/types.js';
 
 const CHAT_SYSTEM_PROMPT = `你是 Huluwa（葫芦娃），一个友好的 AI 助手，在群聊中与用户对话。
 
@@ -106,7 +107,7 @@ export function createChatExecutorNode(model: BaseChatModel, memory?: Conversati
 
     // 获取会话标识
     const isGroup = input.isGroup;
-    const targetId = input.groupId ?? input.messages[0]!.userId;
+    const targetId = extractTargetId(input);
 
     // 构建上下文
     let context = '';

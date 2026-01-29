@@ -9,16 +9,42 @@ import type {
   ConversationTurn,
   SerializedMemoryStore,
 } from './types.js';
-import { extractUserMessageSummary, extractAttachmentMarkers } from './types.js';
+import {
+  extractUserMessageSummary,
+  extractAttachmentMarkers,
+  extractTargetId,
+  getSessionId,
+} from './types.js';
 import { SummaryService } from './summary-service.js';
 import { KnowledgeBase, type EmbeddingFunction } from './knowledge-base.js';
 
 /** 持久化格式版本 */
 const STORE_VERSION = 2;
 
-/** Token 估算：4 个字符约等于 1 个 token（中英混合的合理近似） */
+/**
+ * Token 估算：针对中英混合文本的更准确估算
+ * - 中文字符：约 1.5 tokens（大多数 LLM 对中文 tokenize 较细）
+ * - 空白字符：约 0.1 tokens
+ * - 英文/标点：约 0.3 tokens（平均 3-4 字符一个 token）
+ */
 function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4);
+  let tokens = 0;
+  for (const char of text) {
+    if (/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/.test(char)) {
+      // CJK 统一汉字（基本区 + 扩展A + 兼容区）
+      tokens += 1.5;
+    } else if (/[\u3000-\u303f\uff00-\uffef]/.test(char)) {
+      // CJK 标点符号和全角字符
+      tokens += 1;
+    } else if (/\s/.test(char)) {
+      // 空白字符
+      tokens += 0.1;
+    } else {
+      // 英文字母、数字、半角标点
+      tokens += 0.3;
+    }
+  }
+  return Math.ceil(tokens);
 }
 
 /**
@@ -187,23 +213,13 @@ export class ConversationMemory {
   }
 
   /**
-   * 生成会话 ID
-   */
-  private getSessionId(isGroup: boolean, targetId: number): string {
-    return isGroup ? `group_${targetId}` : `private_${targetId}`;
-  }
-
-  /**
    * 添加一轮对话
    */
   async addTurn(aggregated: AggregatedMessages, botResponse: string): Promise<void> {
     if (!this.config.enabled) return;
 
-    const sessionId = this.getSessionId(
-      aggregated.isGroup,
-      aggregated.groupId ?? aggregated.messages[0]!.userId
-    );
-    const targetId = aggregated.groupId ?? aggregated.messages[0]!.userId;
+    const targetId = extractTargetId(aggregated);
+    const sessionId = getSessionId(aggregated.isGroup, targetId);
 
     const userMessage = extractUserMessageSummary(aggregated);
     const attachmentMarkers = extractAttachmentMarkers(aggregated);
@@ -241,9 +257,14 @@ export class ConversationMemory {
       totalTokens: conversation.totalTokens,
     });
 
-    // 检查是否需要生成摘要
+    // 检查是否需要生成摘要（非阻塞，后台执行）
     if (this.summaryService.recordTurn(sessionId)) {
-      await this.triggerSummarization(conversation);
+      this.triggerSummarization(conversation).catch((err) => {
+        this.logger.error('Background summarization failed', {
+          sessionId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
     }
 
     // 裁剪超出限制的轮次（在摘要生成后）
@@ -287,8 +308,8 @@ export class ConversationMemory {
   ): Promise<string | null> {
     if (!this.config.enabled) return null;
 
-    const sessionId = this.getSessionId(isGroup, targetId);
-    const conversation = this.store.get(sessionId);
+    const sessionId = getSessionId(isGroup, targetId);
+    let conversation = this.store.get(sessionId);
 
     // 检查 TTL
     if (conversation && this.isConversationExpired(conversation)) {
@@ -296,6 +317,7 @@ export class ConversationMemory {
       this.summaryService.clearSession(sessionId);
       this.dirty = true;
       this.logger.debug('Conversation expired', { sessionId });
+      conversation = undefined; // 清除引用，防止后续使用过期数据
     }
 
     const parts: string[] = [];
@@ -350,7 +372,7 @@ export class ConversationMemory {
       return null;
     }
 
-    const sessionId = this.getSessionId(isGroup, targetId);
+    const sessionId = getSessionId(isGroup, targetId);
     return this.knowledgeBase.getFormattedSearchResults(query, sessionId);
   }
 
@@ -358,7 +380,7 @@ export class ConversationMemory {
    * 清除指定会话
    */
   async clearConversation(isGroup: boolean, targetId: number): Promise<void> {
-    const sessionId = this.getSessionId(isGroup, targetId);
+    const sessionId = getSessionId(isGroup, targetId);
     if (this.store.delete(sessionId)) {
       this.summaryService.clearSession(sessionId);
       await this.knowledgeBase.deleteSession(sessionId);

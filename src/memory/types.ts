@@ -126,3 +126,17 @@ export function extractUserMessageSummary(aggregated: AggregatedMessages): strin
 export function extractAttachmentMarkers(aggregated: AggregatedMessages): string[] {
   return aggregated.attachments.map((att) => `[${att.type}: ${att.filename}]`);
 }
+
+/**
+ * 从 AggregatedMessages 提取 targetId（群 ID 或用户 ID）
+ */
+export function extractTargetId(aggregated: AggregatedMessages): number {
+  return aggregated.groupId ?? aggregated.messages[0]!.userId;
+}
+
+/**
+ * 生成会话 ID
+ */
+export function getSessionId(isGroup: boolean, targetId: number): string {
+  return isGroup ? `group_${targetId}` : `private_${targetId}`;
+}

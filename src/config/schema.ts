@@ -39,7 +39,8 @@ export const KnowledgeBaseSchema = z.object({
   directory: z.string().default('./data/knowledge'),
   archiveAfterDays: z.number().int().min(1).max(365).default(7),
   archiveCheckIntervalMinutes: z.number().int().min(1).max(1440).default(60),
-  embeddingProvider: z.string().default('openai'),
+  embeddingProvider: z.enum(['openai', 'zhipu']).default('openai'),
+  embeddingModel: z.string().optional(), // 可选：覆盖默认模型
   searchTopK: z.number().int().min(1).max(50).default(5),
 });
 

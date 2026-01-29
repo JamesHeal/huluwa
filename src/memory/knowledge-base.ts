@@ -9,8 +9,17 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-/** 向量维度（OpenAI text-embedding-3-small） */
-const VECTOR_DIMENSION = 1536;
+/**
+ * 各 embedding provider 的默认向量维度
+ * 注意：使用前需确保 provider 配置与实际使用的模型匹配
+ */
+const VECTOR_DIMENSIONS: Record<string, number> = {
+  openai: 1536, // text-embedding-3-small
+  zhipu: 2048, // embedding-3
+};
+
+/** 默认向量维度 */
+const DEFAULT_VECTOR_DIMENSION = 1536;
 
 /** 表名 */
 const TABLE_NAME = 'messages';
@@ -80,6 +89,10 @@ export class KnowledgeBase {
         this.table = await this.db.openTable(TABLE_NAME);
         this.logger.info('Opened existing table', { table: TABLE_NAME });
       } else {
+        // 根据 embedding provider 获取向量维度
+        const vectorDimension =
+          VECTOR_DIMENSIONS[this.config.embeddingProvider] ?? DEFAULT_VECTOR_DIMENSION;
+
         // 创建表（需要初始数据）
         this.table = await this.db.createTable(TABLE_NAME, [
           {
@@ -91,7 +104,7 @@ export class KnowledgeBase {
             botResponse: '',
             timestamp: 0,
             text: '',
-            vector: new Array(VECTOR_DIMENSION).fill(0),
+            vector: new Array(vectorDimension).fill(0),
           },
         ]);
         // 删除初始化数据
@@ -203,7 +216,7 @@ export class KnowledgeBase {
 
       const results = await searchBuilder.toArray();
 
-      return results.map((r) => ({
+      const searchResults = results.map((r) => ({
         message: {
           id: r.id as string,
           sessionId: r.sessionId as string,
@@ -215,6 +228,21 @@ export class KnowledgeBase {
         },
         score: r._distance !== undefined ? 1 - (r._distance as number) : 0,
       }));
+
+      // 记录搜索质量日志（用于调试和优化）
+      if (searchResults.length > 0) {
+        this.logger.debug('Search results', {
+          query: query.slice(0, 50), // 截断长查询
+          resultCount: searchResults.length,
+          topScore: searchResults[0]!.score.toFixed(4),
+          avgScore: (
+            searchResults.reduce((sum, r) => sum + r.score, 0) / searchResults.length
+          ).toFixed(4),
+          sessionId,
+        });
+      }
+
+      return searchResults;
     } catch (error) {
       this.logger.error('Failed to search', {
         query,

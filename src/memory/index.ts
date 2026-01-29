@@ -11,4 +11,9 @@ export type {
   SearchResult,
   ContextLayer,
 } from './types.js';
-export { extractUserMessageSummary, extractAttachmentMarkers } from './types.js';
+export {
+  extractUserMessageSummary,
+  extractAttachmentMarkers,
+  extractTargetId,
+  getSessionId,
+} from './types.js';
