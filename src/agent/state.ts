@@ -1,5 +1,6 @@
 import { Annotation } from '@langchain/langgraph';
 import type { AggregatedMessages } from '../pipeline/index.js';
+import type { ToolExecutionResult } from '../tools/index.js';
 
 /**
  * 意图类型
@@ -25,7 +26,9 @@ export interface Intent {
  */
 export interface Plan {
   steps: PlanStep[];
-  executorType: string;
+  executorType: 'chat' | 'tool';
+  /** 建议使用的工具名称（仅 tool 类型时有效） */
+  toolHints?: string[];
 }
 
 export interface PlanStep {
@@ -59,6 +62,12 @@ export const AgentState = Annotation.Root({
 
   // 错误信息（如果有）
   error: Annotation<string | undefined>,
+
+  // 工具执行结果（Tool Executor 使用）
+  toolResults: Annotation<ToolExecutionResult[] | undefined>,
+
+  // 工具执行迭代次数
+  toolIterations: Annotation<number | undefined>,
 });
 
 export type AgentStateType = typeof AgentState.State;

@@ -12,6 +12,8 @@ import type { OneBotEvent } from './onebot/types.js';
 import { ModelRegistry } from './ai/index.js';
 import { createAgentGraph, type CompiledAgentGraph } from './agent/index.js';
 import { ConversationMemory, createEmbeddingFunction } from './memory/index.js';
+import { ToolRegistry } from './tools/index.js';
+import { registerBuiltinTools } from './tools/builtin/index.js';
 
 export class App {
   private readonly config: Config;
@@ -61,11 +63,21 @@ export class App {
     const summaryModel = models.has('glm') ? models.get('glm') : models.getDefault();
     this.conversationMemory.setModel(summaryModel);
 
+    // 创建工具注册表并注册内置工具
+    const toolRegistry = new ToolRegistry();
+    registerBuiltinTools(toolRegistry, config.tools.webSearch);
+    this.logger.info('Tools registered', {
+      count: toolRegistry.size,
+      names: toolRegistry.getNames(),
+    });
+
     // 创建 Agent Graph
     this.agentGraph = createAgentGraph({
       models,
       logger,
       memory: this.conversationMemory,
+      tools: toolRegistry,
+      toolsConfig: config.tools,
     });
 
     this.setupWebhookRoute();

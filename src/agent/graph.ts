@@ -5,9 +5,12 @@ import { createIntentNode } from './nodes/intent.js';
 import { createPlanNode } from './nodes/plan.js';
 import { createRouterNode, routeToExecutor } from './nodes/router.js';
 import { createChatExecutorNode } from './nodes/chat-executor.js';
+import { createToolExecutorNode } from './nodes/tool-executor.js';
 import type { Logger } from '../logger/logger.js';
 import type { ModelRegistry } from '../ai/model-registry.js';
 import type { ConversationMemory } from '../memory/index.js';
+import type { ToolRegistry } from '../tools/index.js';
+import type { ToolsConfig } from '../config/schema.js';
 
 /**
  * Intent 路由条件函数
@@ -34,6 +37,88 @@ export interface AgentGraphConfig {
   models: ModelRegistry;
   logger: Logger;
   memory?: ConversationMemory;
+  /** 工具注册表（可选，如果提供则启用工具执行器） */
+  tools?: ToolRegistry;
+  /** 工具配置（可选） */
+  toolsConfig?: ToolsConfig;
+}
+
+/**
+ * 创建 Agent 工作流图（无工具版本）
+ */
+function createGraphWithoutTools(
+  summaryNode: ReturnType<typeof createSummaryNode>,
+  intentNode: ReturnType<typeof createIntentNode>,
+  ignoreNode: ReturnType<typeof createIgnoreNode>,
+  planNode: ReturnType<typeof createPlanNode>,
+  routerNode: ReturnType<typeof createRouterNode>,
+  chatExecutorNode: ReturnType<typeof createChatExecutorNode>,
+  wrapNode: <T extends (state: AgentStateType) => Promise<Partial<AgentStateType>>>(
+    name: string,
+    node: T
+  ) => (state: AgentStateType) => Promise<Partial<AgentStateType>>
+) {
+  return new StateGraph(AgentState)
+    .addNode('summarizer', wrapNode('summarizer', summaryNode))
+    .addNode('intentRecognizer', wrapNode('intentRecognizer', intentNode))
+    .addNode('ignoreHandler', wrapNode('ignoreHandler', ignoreNode))
+    .addNode('planner', wrapNode('planner', planNode))
+    .addNode('router', wrapNode('router', routerNode))
+    .addNode('chatExecutor', wrapNode('chatExecutor', chatExecutorNode))
+    .addEdge('__start__', 'summarizer')
+    .addEdge('summarizer', 'intentRecognizer')
+    .addConditionalEdges('intentRecognizer', routeAfterIntent, {
+      ignore: 'ignoreHandler',
+      continue: 'planner',
+    })
+    .addEdge('ignoreHandler', END)
+    .addEdge('planner', 'router')
+    .addConditionalEdges('router', routeToExecutor, {
+      chat: 'chatExecutor',
+    })
+    .addEdge('chatExecutor', END)
+    .compile();
+}
+
+/**
+ * 创建 Agent 工作流图（带工具版本）
+ */
+function createGraphWithTools(
+  summaryNode: ReturnType<typeof createSummaryNode>,
+  intentNode: ReturnType<typeof createIntentNode>,
+  ignoreNode: ReturnType<typeof createIgnoreNode>,
+  planNode: ReturnType<typeof createPlanNode>,
+  routerNode: ReturnType<typeof createRouterNode>,
+  chatExecutorNode: ReturnType<typeof createChatExecutorNode>,
+  toolExecutorNode: ReturnType<typeof createToolExecutorNode>,
+  wrapNode: <T extends (state: AgentStateType) => Promise<Partial<AgentStateType>>>(
+    name: string,
+    node: T
+  ) => (state: AgentStateType) => Promise<Partial<AgentStateType>>
+) {
+  return new StateGraph(AgentState)
+    .addNode('summarizer', wrapNode('summarizer', summaryNode))
+    .addNode('intentRecognizer', wrapNode('intentRecognizer', intentNode))
+    .addNode('ignoreHandler', wrapNode('ignoreHandler', ignoreNode))
+    .addNode('planner', wrapNode('planner', planNode))
+    .addNode('router', wrapNode('router', routerNode))
+    .addNode('chatExecutor', wrapNode('chatExecutor', chatExecutorNode))
+    .addNode('toolExecutor', wrapNode('toolExecutor', toolExecutorNode))
+    .addEdge('__start__', 'summarizer')
+    .addEdge('summarizer', 'intentRecognizer')
+    .addConditionalEdges('intentRecognizer', routeAfterIntent, {
+      ignore: 'ignoreHandler',
+      continue: 'planner',
+    })
+    .addEdge('ignoreHandler', END)
+    .addEdge('planner', 'router')
+    .addConditionalEdges('router', routeToExecutor, {
+      chat: 'chatExecutor',
+      tool: 'toolExecutor',
+    })
+    .addEdge('chatExecutor', END)
+    .addEdge('toolExecutor', END)
+    .compile();
 }
 
 /**
@@ -49,11 +134,11 @@ export interface AgentGraphConfig {
  * 节点模型分配策略：
  * - summary：文本压缩，轻量任务，优先使用 "glm"（快速、低成本）
  * - intent / plan：决策关键节点，使用默认模型（高质量，保证准确性）
- * - chat executor：核心对话生成 + 多模态理解，使用默认模型（高质量）
+ * - chat / tool executor：核心功能，使用默认模型（高质量）
  * - 若指定模型未配置，自动回退到默认模型
  */
 export function createAgentGraph(config: AgentGraphConfig) {
-  const { models, logger, memory } = config;
+  const { models, logger, memory, tools, toolsConfig } = config;
   const agentLogger = logger.child('AgentGraph');
 
   const fastModel = models.has('glm') ? models.get('glm') : models.getDefault();
@@ -62,18 +147,33 @@ export function createAgentGraph(config: AgentGraphConfig) {
   const fastModelName = models.has('glm') ? 'glm' : models.getDefaultName();
   const primaryModelName = models.getDefaultName();
 
+  const hasTools = tools && tools.size > 0;
+
   agentLogger.info('Node model assignment', {
     summary: fastModelName,
     intent: primaryModelName,
     plan: primaryModelName,
     chat: primaryModelName,
+    tool: hasTools ? primaryModelName : 'disabled',
   });
+
+  if (hasTools) {
+    agentLogger.info('Tools enabled', {
+      count: tools.size,
+      names: tools.getNames(),
+    });
+  }
 
   // 创建各个节点
   const summaryNode = createSummaryNode(fastModel);
   const intentNode = createIntentNode(primaryModel);
   const ignoreNode = createIgnoreNode();
-  const planNode = createPlanNode(primaryModel);
+
+  // Plan 节点需要工具描述
+  const planNode = createPlanNode(primaryModel, {
+    toolDescriptions: hasTools ? tools.getToolDescriptions() : undefined,
+  });
+
   const routerNode = createRouterNode();
   const chatExecutorNode = createChatExecutorNode(primaryModel, memory);
 
@@ -100,30 +200,35 @@ export function createAgentGraph(config: AgentGraphConfig) {
     };
   };
 
-  // 构建图
-  const graph = new StateGraph(AgentState)
-    .addNode('summarizer', wrapNode('summarizer', summaryNode))
-    .addNode('intentRecognizer', wrapNode('intentRecognizer', intentNode))
-    .addNode('ignoreHandler', wrapNode('ignoreHandler', ignoreNode))
-    .addNode('planner', wrapNode('planner', planNode))
-    .addNode('router', wrapNode('router', routerNode))
-    .addNode('chatExecutor', wrapNode('chatExecutor', chatExecutorNode))
-    // 边：summarizer -> intentRecognizer -> (ignore? -> END : planner -> router -> executor -> END)
-    .addEdge('__start__', 'summarizer')
-    .addEdge('summarizer', 'intentRecognizer')
-    .addConditionalEdges('intentRecognizer', routeAfterIntent, {
-      ignore: 'ignoreHandler',
-      continue: 'planner',
-    })
-    .addEdge('ignoreHandler', END)
-    .addEdge('planner', 'router')
-    .addConditionalEdges('router', routeToExecutor, {
-      chat: 'chatExecutor',
-      // 后续可扩展更多执行器
-    })
-    .addEdge('chatExecutor', END);
+  // 根据是否有工具，选择不同的图结构
+  if (hasTools) {
+    const toolExecutorNode = createToolExecutorNode(
+      primaryModel,
+      tools,
+      memory,
+      toolsConfig
+    );
+    return createGraphWithTools(
+      summaryNode,
+      intentNode,
+      ignoreNode,
+      planNode,
+      routerNode,
+      chatExecutorNode,
+      toolExecutorNode,
+      wrapNode
+    );
+  }
 
-  return graph.compile();
+  return createGraphWithoutTools(
+    summaryNode,
+    intentNode,
+    ignoreNode,
+    planNode,
+    routerNode,
+    chatExecutorNode,
+    wrapNode
+  );
 }
 
 export type CompiledAgentGraph = ReturnType<typeof createAgentGraph>;

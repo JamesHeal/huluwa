@@ -101,6 +101,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);
@@ -133,6 +135,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);
@@ -164,6 +168,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);
@@ -189,6 +195,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);
@@ -214,6 +222,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);
@@ -233,6 +243,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -257,6 +269,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);
@@ -289,6 +303,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);
@@ -326,6 +342,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);
@@ -360,6 +378,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);
@@ -392,6 +412,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);
@@ -425,6 +447,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);
@@ -458,6 +482,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);
@@ -491,6 +517,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);
@@ -516,6 +544,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);
@@ -542,6 +572,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -564,6 +596,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -587,6 +621,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);
@@ -614,6 +650,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);
@@ -635,6 +673,8 @@ describe('ChatExecutorNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);

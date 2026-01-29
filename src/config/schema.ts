@@ -54,6 +54,23 @@ export const MemorySchema = z.object({
   knowledgeBase: KnowledgeBaseSchema.default({}),
 });
 
+export const ToolsCacheSchema = z.object({
+  enabled: z.boolean().default(true),
+  maxSize: z.number().int().min(10).max(1000).default(100),
+});
+
+export const WebSearchSchema = z.object({
+  enabled: z.boolean().default(false),
+  provider: z.enum(['tavily']).default('tavily'),
+  apiKey: z.string().optional(),
+});
+
+export const ToolsSchema = z.object({
+  cache: ToolsCacheSchema.default({}),
+  defaultTimeoutMs: z.number().int().min(1000).max(120000).default(30000),
+  webSearch: WebSearchSchema.default({}),
+});
+
 export const LoggingSchema = z.object({
   level: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   file: LogFileSchema.default({}),
@@ -96,6 +113,7 @@ export const ConfigSchema = z.object({
   pipeline: PipelineSchema.default({}),
   ai: AISchema,
   memory: MemorySchema.default({}),
+  tools: ToolsSchema.default({}),
 });
 
 export type Target = z.infer<typeof TargetSchema>;
@@ -110,4 +128,7 @@ export type MemoryPersistenceConfig = z.infer<typeof MemoryPersistenceSchema>;
 export type SummarizationConfig = z.infer<typeof SummarizationSchema>;
 export type KnowledgeBaseConfig = z.infer<typeof KnowledgeBaseSchema>;
 export type MemoryConfig = z.infer<typeof MemorySchema>;
+export type ToolsCacheConfig = z.infer<typeof ToolsCacheSchema>;
+export type WebSearchConfig = z.infer<typeof WebSearchSchema>;
+export type ToolsConfig = z.infer<typeof ToolsSchema>;
 export type Config = z.infer<typeof ConfigSchema>;

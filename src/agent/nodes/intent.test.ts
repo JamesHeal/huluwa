@@ -38,6 +38,8 @@ describe('IntentNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -66,6 +68,8 @@ describe('IntentNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -91,6 +95,8 @@ describe('IntentNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -113,6 +119,8 @@ describe('IntentNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -134,6 +142,8 @@ describe('IntentNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -156,6 +166,8 @@ describe('IntentNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -180,6 +192,8 @@ describe('IntentNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -201,6 +215,8 @@ describe('IntentNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -220,6 +236,8 @@ describe('IntentNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -243,6 +261,8 @@ describe('IntentNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -262,6 +282,8 @@ describe('IntentNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -283,6 +305,8 @@ describe('IntentNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -306,6 +330,8 @@ describe('IntentNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -326,6 +352,8 @@ describe('IntentNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -357,6 +385,8 @@ describe('IntentNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);

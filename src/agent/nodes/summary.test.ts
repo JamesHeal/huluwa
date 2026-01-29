@@ -66,6 +66,8 @@ describe('SummaryNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -94,6 +96,8 @@ describe('SummaryNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -115,6 +119,8 @@ describe('SummaryNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);
@@ -141,6 +147,8 @@ describe('SummaryNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -165,6 +173,8 @@ describe('SummaryNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -188,6 +198,8 @@ describe('SummaryNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       await node(state);

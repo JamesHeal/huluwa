@@ -35,6 +35,8 @@ describe('RouterNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -42,27 +44,30 @@ describe('RouterNode', () => {
       expect(result.executorType).toBe('chat');
     });
 
-    it('should handle custom executor types', async () => {
+    it('should handle tool executor type', async () => {
       const node = createRouterNode();
 
       const plan: Plan = {
-        executorType: 'search',
-        steps: [{ action: 'search', description: '搜索信息' }],
+        executorType: 'tool',
+        steps: [{ action: 'calculate', description: '计算数值' }],
+        toolHints: ['calculator'],
       };
 
       const state: AgentStateType = {
         input: mockInput,
         summary: '测试',
-        intent: { type: 'command', confidence: 0.9, description: '搜索命令' },
+        intent: { type: 'command', confidence: 0.9, description: '计算命令' },
         plan,
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
 
-      expect(result.executorType).toBe('search');
+      expect(result.executorType).toBe('tool');
     });
 
     it('should default to chat when plan is undefined', async () => {
@@ -76,6 +81,8 @@ describe('RouterNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -99,6 +106,8 @@ describe('RouterNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = await node(state);
@@ -117,6 +126,8 @@ describe('RouterNode', () => {
         executorType: 'chat',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = routeToExecutor(state);
@@ -124,7 +135,7 @@ describe('RouterNode', () => {
       expect(result).toBe('chat');
     });
 
-    it('should return custom executor type', () => {
+    it('should return tool executor type', () => {
       const state: AgentStateType = {
         input: mockInput,
         summary: '测试',
@@ -133,6 +144,8 @@ describe('RouterNode', () => {
         executorType: 'tool',
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = routeToExecutor(state);
@@ -149,6 +162,8 @@ describe('RouterNode', () => {
         executorType: undefined,
         response: undefined,
         error: undefined,
+        toolResults: undefined,
+        toolIterations: undefined,
       };
 
       const result = routeToExecutor(state);
