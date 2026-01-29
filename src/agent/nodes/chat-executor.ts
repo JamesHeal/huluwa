@@ -3,6 +3,7 @@ import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import type { MessageContent, ContentBlock } from '@langchain/core/messages';
 import type { AgentStateType } from '../state.js';
 import type { Attachment } from '../../onebot/types.js';
+import type { ConversationMemory } from '../../memory/index.js';
 
 const CHAT_SYSTEM_PROMPT = `你是 Huluwa（葫芦娃），一个友好的 AI 助手，在群聊中与用户对话。
 
@@ -99,14 +100,28 @@ function buildAttachmentBlocks(
 /**
  * 创建 Chat Executor 节点
  */
-export function createChatExecutorNode(model: BaseChatModel) {
+export function createChatExecutorNode(model: BaseChatModel, memory?: ConversationMemory) {
   return async (state: AgentStateType): Promise<Partial<AgentStateType>> => {
     const { input, summary, intent } = state;
 
+    // 获取会话标识
+    const isGroup = input.isGroup;
+    const targetId = input.groupId ?? input.messages[0]!.userId;
+
     // 构建上下文
     let context = '';
+
+    // 注入历史对话（如果有）- 传入当前查询用于 RAG 检索
+    if (memory?.isEnabled()) {
+      const currentQuery = input.plainText;
+      const history = await memory.getHistory(isGroup, targetId, currentQuery);
+      if (history) {
+        context += `[历史对话]\n${history}\n\n`;
+      }
+    }
+
     if (input.count > 1) {
-      context = `[消息摘要] ${summary}\n\n`;
+      context += `[消息摘要] ${summary}\n\n`;
       context += `[参与者] ${input.participants.map((p) => p.nickname).join('、')}\n\n`;
     }
 
@@ -114,7 +129,7 @@ export function createChatExecutorNode(model: BaseChatModel) {
       context += `[识别的意图] ${intent.description}\n\n`;
     }
 
-    context += `[原始消息]\n${input.formattedText}`;
+    context += `[当前消息]\n${input.formattedText}`;
 
     // 构建附件 blocks
     const attachmentBlocks = buildAttachmentBlocks(input.attachments);
@@ -142,6 +157,11 @@ export function createChatExecutorNode(model: BaseChatModel) {
         typeof response.content === 'string'
           ? response.content
           : JSON.stringify(response.content);
+
+      // 保存本轮对话到记忆
+      if (memory?.isEnabled() && content) {
+        await memory.addTurn(input, content);
+      }
 
       return { response: content };
     } catch (error) {

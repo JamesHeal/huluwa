@@ -6,9 +6,9 @@
 
 ## 当前状态
 
-**Phase 3: Multi-Agent Pipeline** — ✅ 已完成
+**Phase 3.5: @mention 触发机制** — ✅ 已完成
 
-Bot 现在具备 AI 对话能力，使用 LangGraph 实现多 Agent 工作流。
+Bot 现在只在被 @mention 时触发处理，支持 ignore 意图识别。
 
 ---
 
@@ -65,18 +65,24 @@ Bot 现在具备 AI 对话能力，使用 LangGraph 实现多 Agent 工作流。
 
 | 文件 | 功能 |
 |------|------|
-| `src/pipeline/message-queue.ts` | FIFO 消息队列 |
-| `src/pipeline/debounce-controller.ts` | Debounce 控制器，时间间隔触发 |
+| `src/pipeline/message-queue.ts` | FIFO 消息队列（历史缓冲区） |
+| `src/pipeline/debounce-controller.ts` | Debounce 控制器（已弃用，保留代码） |
 | `src/pipeline/message-aggregator.ts` | 多消息聚合，保留发送者信息 |
 
-**Debounce 策略：**
-- `debounceMs`：收到最后一条消息后等待时间（默认 3 秒）
-- `maxWaitMs`：收到第一条消息后最长等待时间（默认 10 秒）
-- 进度反馈：多条消息时发送 "正在处理..." 提示
+**@mention 触发机制（当前）：**
+```
+消息到达 → 过滤 → normalize(检测@bot) → 入队缓冲
+                                         ↓ (如果 isMentionBot)
+                                    flush 全部历史 → 聚合 → Agent
+```
+- 所有消息存入 `MessageQueue` 作为历史缓冲
+- 只有 `@bot` 消息触发处理
+- 触发时 flush 全部缓冲消息，一起发给 AI 作为上下文
+- 进度反馈：多条消息时发送"收到，让我看下..."
 
 **消息聚合：**
 - 统计参与者和消息数量
-- 格式化对话文本：`[昵称] 消息内容`
+- 格式化对话文本：`[昵称] [→@我] 消息内容`（@bot 消息带标记）
 - 保留时间范围信息
 
 ### 5. AI Provider 抽象
@@ -94,23 +100,32 @@ Bot 现在具备 AI 对话能力，使用 LangGraph 实现多 Agent 工作流。
 
 | 文件 | 功能 |
 |------|------|
-| `src/agent/state.ts` | LangGraph 状态定义 |
-| `src/agent/graph.ts` | Agent 工作流图 |
-| `src/agent/nodes/summary.ts` | 消息总结节点 |
-| `src/agent/nodes/intent.ts` | 意图识别节点 |
+| `src/agent/state.ts` | LangGraph 状态定义（IntentType 含 ignore） |
+| `src/agent/graph.ts` | Agent 工作流图（含 ignoreHandler 节点） |
+| `src/agent/nodes/summary.ts` | 消息总结节点（理解 `[→@我]` 标记） |
+| `src/agent/nodes/intent.ts` | 意图识别节点（支持 ignore 意图） |
 | `src/agent/nodes/router.ts` | 路由节点 |
-| `src/agent/nodes/chat-executor.ts` | 对话执行节点 |
+| `src/agent/nodes/chat-executor.ts` | 对话执行节点（Bot 身份认知） |
 
 **工作流程：**
 ```
-Input → Summary → Intent → Router → Executor → Response
+Input → Summary → Intent ──→ ignore? ──→ ignoreHandler → END (不发消息)
+                              │
+                              └──→ Planner → Router → Executor → Response
 ```
 
 **节点说明：**
-- **Summary**：多条消息时生成摘要
-- **Intent**：识别意图（chat/question/command）
-- **Router**：根据意图选择执行器
-- **Chat Executor**：生成对话回复
+- **Summary**：多条消息时生成摘要，关注 `[→@我]` 标记的消息
+- **Intent**：识别意图（chat/question/command/ignore/unknown）
+- **ignoreHandler**：ignore 意图时设置空响应，跳过后续处理
+- **Router**：根据计划选择执行器
+- **Chat Executor**：生成对话回复，Bot 知道自己是"Huluwa"
+
+**Bot 身份认知：**
+- Bot 名称：Huluwa（葫芦娃）
+- `@Huluwa` = 和 Bot 说话
+- 消息中 `[→@我]` 标记 = 需要回复
+- 无标记消息 = 上下文参考，不逐条回复
 
 ### 7. OneBot 集成（QQ）
 
@@ -118,20 +133,38 @@ Input → Summary → Intent → Router → Executor → Response
 |------|------|
 | `src/onebot/types.ts` | OneBot 11 协议类型定义 |
 | `src/onebot/errors.ts` | 错误类型（连接错误、API 错误） |
-| `src/onebot/client.ts` | HTTP API 客户端 |
-| `src/onebot/webhook.ts` | Webhook 事件处理器 |
-| `src/onebot/message-normalizer.ts` | 消息规范化 |
+| `src/onebot/client.ts` | HTTP API 客户端（segment 数组格式发送） |
+| `src/onebot/webhook.ts` | Webhook 事件处理器（传递 selfId） |
+| `src/onebot/message-normalizer.ts` | 消息规范化（@bot 检测） |
 
 **客户端功能：**
 - `getLoginInfo()` — 获取登录信息
-- `sendPrivateMsg()` — 发送私聊消息
-- `sendGroupMsg()` — 发送群聊消息
+- `sendPrivateMsg()` — 发送私聊消息（segment 格式，避免 CQ 码解析问题）
+- `sendGroupMsg()` — 发送群聊消息（segment 格式）
 - `getGroupInfo()` — 获取群信息
+- `downloadAttachments()` — 下载附件到 base64
 
 **Webhook 处理：**
 - 过滤非目标群聊消息
 - 过滤 Bot 自己发送的消息
 - 消息规范化为统一格式
+- 检测 `{type: 'at', data: {qq: selfId}}` 设置 `isMentionBot` 标志
+
+**NormalizedMessage 结构：**
+```typescript
+interface NormalizedMessage {
+  messageId: number;
+  messageType: 'private' | 'group';
+  text: string;
+  userId: number;
+  groupId: number | undefined;
+  nickname: string;
+  timestamp: Date;
+  isGroup: boolean;
+  attachments: Attachment[];
+  isMentionBot: boolean;  // 新增：是否 @bot
+}
+```
 
 ### 5. HTTP 服务器
 
@@ -172,13 +205,14 @@ huluwa/
 │   │   └── provider.ts          # LangChain 模型工厂
 │   ├── agent/
 │   │   ├── index.ts
-│   │   ├── state.ts             # LangGraph 状态定义
-│   │   ├── graph.ts             # Agent 工作流图
+│   │   ├── state.ts             # LangGraph 状态定义（含 ignore 意图）
+│   │   ├── graph.ts             # Agent 工作流图（含 ignoreHandler）
 │   │   └── nodes/
 │   │       ├── summary.ts       # 消息总结节点
-│   │       ├── intent.ts        # 意图识别节点
+│   │       ├── intent.ts        # 意图识别节点（支持 ignore）
+│   │       ├── plan.ts          # 计划节点
 │   │       ├── router.ts        # 路由节点
-│   │       └── chat-executor.ts # 对话执行节点
+│   │       └── chat-executor.ts # 对话执行节点（Bot 身份认知）
 │   ├── config/
 │   │   ├── index.ts
 │   │   ├── schema.ts            # Zod Schema
@@ -305,6 +339,49 @@ pnpm start
 | M1: 能说话 | ✅ | Bot 能在 QQ 群中收发消息 |
 | M1.5: 会等待 | ✅ | 消息 Debounce、聚合 |
 | M2: 会思考 | ✅ | LangGraph 多 Agent 对话 Pipeline |
+| M2.5: 懂礼貌 | ✅ | @mention 触发、ignore 意图、Bot 身份认知 |
 | M3: 有记忆 | ⏳ | 待开发：上下文管理 |
 | M4: 能动手 | ⏳ | 待开发：工具调用 |
 | M5: 可管理 | ⏳ | 待开发：Web UI |
+
+---
+
+## 本次更新详情 (2026-01-29)
+
+### @mention 触发机制
+
+**改动背景：** 原 debounce 机制会响应所有消息，现改为只在被 @mention 时触发。
+
+**改动文件：**
+
+| 文件 | 改动 |
+|------|------|
+| `src/onebot/message-normalizer.ts` | 新增 `isMentionBot` 字段，检测 @bot 段 |
+| `src/onebot/webhook.ts` | 传递 `selfId` 给 normalizer |
+| `src/onebot/client.ts` | 发消息改用 segment 数组格式 |
+| `src/app.ts` | `DebounceController` → `MessageQueue`；空响应不发消息 |
+| `src/pipeline/message-aggregator.ts` | formattedText 标记 `[→@我]` |
+| `src/agent/state.ts` | IntentType 新增 `'ignore'` |
+| `src/agent/nodes/intent.ts` | prompt 支持 ignore 识别 |
+| `src/agent/nodes/summary.ts` | prompt 理解标记 |
+| `src/agent/nodes/chat-executor.ts` | Bot 身份认知（Huluwa） |
+| `src/agent/graph.ts` | 新增 `ignoreHandler` 节点和条件路由 |
+
+**新流程：**
+```
+消息到达 → 过滤 → normalize(检测@bot) → 入队
+                                        ↓ (isMentionBot)
+                                   flush 全部 → Agent Graph
+                                                    ↓
+                                        intent == ignore? → 不发消息
+                                                    ↓
+                                               正常回复
+```
+
+### 后续开发方向
+
+1. **多轮对话记忆** — 保留历史上下文
+2. **工具调用** — 联网搜索、代码执行
+3. **更多 Executor** — question/command 专用处理器
+4. **消息缓冲区管理** — 设置上限或过期时间
+5. **私聊模式** — 私聊无需 @，直接触发

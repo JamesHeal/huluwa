@@ -21,6 +21,38 @@ export const LogFileSchema = z.object({
   directory: z.string().default('./logs'),
 });
 
+export const MemoryPersistenceSchema = z.object({
+  enabled: z.boolean().default(false),
+  directory: z.string().default('./data/memory'),
+  saveIntervalSeconds: z.number().int().min(0).max(3600).default(300),
+});
+
+export const SummarizationSchema = z.object({
+  enabled: z.boolean().default(true),
+  triggerTurns: z.number().int().min(3).max(50).default(10),
+  maxSummaries: z.number().int().min(1).max(100).default(20),
+  summaryMaxTokens: z.number().int().min(50).max(2000).default(500),
+});
+
+export const KnowledgeBaseSchema = z.object({
+  enabled: z.boolean().default(false),
+  directory: z.string().default('./data/knowledge'),
+  archiveAfterDays: z.number().int().min(1).max(365).default(7),
+  archiveCheckIntervalMinutes: z.number().int().min(1).max(1440).default(60),
+  embeddingProvider: z.string().default('openai'),
+  searchTopK: z.number().int().min(1).max(50).default(5),
+});
+
+export const MemorySchema = z.object({
+  enabled: z.boolean().default(true),
+  maxTurns: z.number().int().min(1).max(100).default(20),
+  maxTokens: z.number().int().min(100).max(100000).default(8000),
+  ttlMinutes: z.number().int().min(0).max(10080).default(60),
+  persistence: MemoryPersistenceSchema.default({}),
+  summarization: SummarizationSchema.default({}),
+  knowledgeBase: KnowledgeBaseSchema.default({}),
+});
+
 export const LoggingSchema = z.object({
   level: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   file: LogFileSchema.default({}),
@@ -62,6 +94,7 @@ export const ConfigSchema = z.object({
   logging: LoggingSchema.default({}),
   pipeline: PipelineSchema.default({}),
   ai: AISchema,
+  memory: MemorySchema.default({}),
 });
 
 export type Target = z.infer<typeof TargetSchema>;
@@ -72,4 +105,8 @@ export type LoggingConfig = z.infer<typeof LoggingSchema>;
 export type PipelineConfig = z.infer<typeof PipelineSchema>;
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
 export type AIConfig = z.infer<typeof AISchema>;
+export type MemoryPersistenceConfig = z.infer<typeof MemoryPersistenceSchema>;
+export type SummarizationConfig = z.infer<typeof SummarizationSchema>;
+export type KnowledgeBaseConfig = z.infer<typeof KnowledgeBaseSchema>;
+export type MemoryConfig = z.infer<typeof MemorySchema>;
 export type Config = z.infer<typeof ConfigSchema>;

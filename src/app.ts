@@ -11,6 +11,7 @@ import { HttpServer } from './server/server.js';
 import type { OneBotEvent } from './onebot/types.js';
 import { ModelRegistry } from './ai/index.js';
 import { createAgentGraph, type CompiledAgentGraph } from './agent/index.js';
+import { ConversationMemory, createEmbeddingFunction } from './memory/index.js';
 
 export class App {
   private readonly config: Config;
@@ -20,6 +21,7 @@ export class App {
   private readonly messageQueue: MessageQueue;
   private readonly messageAggregator: MessageAggregator;
   private readonly httpServer: HttpServer;
+  private readonly conversationMemory: ConversationMemory;
   private readonly agentGraph: CompiledAgentGraph;
   private isShuttingDown = false;
 
@@ -49,12 +51,21 @@ export class App {
 
     this.httpServer = new HttpServer(config.server, logger);
 
-    // 创建模型注册表和 Agent Graph
+    // 创建模型注册表
     const models = new ModelRegistry(config.ai, logger);
 
+    // 创建对话记忆
+    this.conversationMemory = new ConversationMemory(config.memory, logger);
+
+    // 配置摘要生成模型（使用快速模型，如 glm，否则用默认模型）
+    const summaryModel = models.has('glm') ? models.get('glm') : models.getDefault();
+    this.conversationMemory.setModel(summaryModel);
+
+    // 创建 Agent Graph
     this.agentGraph = createAgentGraph({
       models,
       logger,
+      memory: this.conversationMemory,
     });
 
     this.setupWebhookRoute();
@@ -230,6 +241,19 @@ export class App {
       throw error;
     }
 
+    // 初始化知识库（如果启用）
+    if (this.config.memory.knowledgeBase.enabled) {
+      const embeddingFn = createEmbeddingFunction(
+        this.config.memory.knowledgeBase,
+        this.config.ai,
+        this.logger
+      );
+      if (embeddingFn) {
+        this.conversationMemory.setEmbeddingFunction(embeddingFn);
+        await this.conversationMemory.initializeKnowledgeBase();
+      }
+    }
+
     await this.httpServer.start();
 
     this.logger.info('Application started', {
@@ -249,6 +273,9 @@ export class App {
 
     // 清空消息队列
     this.messageQueue.clear();
+
+    // 保存对话记忆
+    await this.conversationMemory.shutdown();
 
     await this.httpServer.stop();
 

@@ -7,6 +7,7 @@ import { createRouterNode, routeToExecutor } from './nodes/router.js';
 import { createChatExecutorNode } from './nodes/chat-executor.js';
 import type { Logger } from '../logger/logger.js';
 import type { ModelRegistry } from '../ai/model-registry.js';
+import type { ConversationMemory } from '../memory/index.js';
 
 /**
  * Intent 路由条件函数
@@ -32,6 +33,7 @@ function createIgnoreNode() {
 export interface AgentGraphConfig {
   models: ModelRegistry;
   logger: Logger;
+  memory?: ConversationMemory;
 }
 
 /**
@@ -51,7 +53,7 @@ export interface AgentGraphConfig {
  * - 若指定模型未配置，自动回退到默认模型
  */
 export function createAgentGraph(config: AgentGraphConfig) {
-  const { models, logger } = config;
+  const { models, logger, memory } = config;
   const agentLogger = logger.child('AgentGraph');
 
   const fastModel = models.has('glm') ? models.get('glm') : models.getDefault();
@@ -73,7 +75,7 @@ export function createAgentGraph(config: AgentGraphConfig) {
   const ignoreNode = createIgnoreNode();
   const planNode = createPlanNode(primaryModel);
   const routerNode = createRouterNode();
-  const chatExecutorNode = createChatExecutorNode(primaryModel);
+  const chatExecutorNode = createChatExecutorNode(primaryModel, memory);
 
   // 包装节点以添加日志
   const wrapNode = <T extends (state: AgentStateType) => Promise<Partial<AgentStateType>>>(

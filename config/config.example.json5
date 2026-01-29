@@ -95,4 +95,54 @@
       // },
     },
   },
+
+  // 对话记忆配置（三层上下文架构）
+  memory: {
+    // 是否启用多轮对话记忆
+    enabled: true,
+    // 最大保留轮数（每轮 = 用户消息 + Bot 回复）- Layer 1: Sliding Window
+    maxTurns: 20,
+    // 最大 token 数估算（超出时自动裁剪最早的轮次）
+    maxTokens: 8000,
+    // 对话过期时间（分钟），0 表示永不过期
+    ttlMinutes: 60,
+
+    // 持久化配置
+    persistence: {
+      // 是否启用持久化（重启后保留对话历史）
+      enabled: false,
+      // 持久化文件存储目录
+      directory: "./data/memory",
+      // 自动保存间隔（秒），0 表示禁用自动保存
+      saveIntervalSeconds: 300,
+    },
+
+    // Layer 2: 摘要配置（中期历史压缩）
+    summarization: {
+      // 是否启用自动摘要
+      enabled: true,
+      // 每隔多少轮触发一次摘要生成
+      triggerTurns: 10,
+      // 最多保留多少条摘要
+      maxSummaries: 20,
+      // 每条摘要最大 token 数
+      summaryMaxTokens: 500,
+    },
+
+    // Layer 3: 知识库配置（长期历史向量检索）
+    knowledgeBase: {
+      // 是否启用知识库（需要配置 OpenAI provider 用于 embedding）
+      enabled: false,
+      // 知识库存储目录
+      directory: "./data/knowledge",
+      // 多少天前的消息归档到知识库
+      archiveAfterDays: 7,
+      // 归档检查间隔（分钟），定时扫描并归档超过 archiveAfterDays 的消息
+      archiveCheckIntervalMinutes: 60,
+      // 用于生成 embedding 的 provider（需要在 ai.providers 中配置）
+      embeddingProvider: "openai",
+      // 搜索返回的最大结果数
+      searchTopK: 5,
+    },
+  },
 }
