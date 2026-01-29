@@ -88,7 +88,7 @@ export class OneBotClient {
 
     const result = await this.request<OneBotSendMessageResponse>('send_private_msg', {
       user_id: userId,
-      message,
+      message: [{ type: 'text', data: { text: message } }],
     });
 
     this.logger.info('Private message sent', { messageId: result.message_id });
@@ -100,7 +100,7 @@ export class OneBotClient {
 
     const result = await this.request<OneBotSendMessageResponse>('send_group_msg', {
       group_id: groupId,
-      message,
+      message: [{ type: 'text', data: { text: message } }],
     });
 
     this.logger.info('Group message sent', { messageId: result.message_id });

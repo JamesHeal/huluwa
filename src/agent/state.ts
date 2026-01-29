@@ -8,6 +8,7 @@ export type IntentType =
   | 'chat' // 普通对话
   | 'question' // 提问
   | 'command' // 命令/指令
+  | 'ignore' // 不需要回复（非 @bot 的消息）
   | 'unknown'; // 无法识别
 
 /**

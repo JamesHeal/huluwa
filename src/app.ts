@@ -3,7 +3,7 @@ import { Logger } from './logger/logger.js';
 import { OneBotClient } from './onebot/client.js';
 import { WebhookHandler, type NormalizedMessage } from './onebot/index.js';
 import {
-  DebounceController,
+  MessageQueue,
   MessageAggregator,
   type AggregatedMessages,
 } from './pipeline/index.js';
@@ -17,7 +17,7 @@ export class App {
   private readonly logger: Logger;
   private readonly oneBotClient: OneBotClient;
   private readonly webhookHandler: WebhookHandler;
-  private readonly debounceController: DebounceController;
+  private readonly messageQueue: MessageQueue;
   private readonly messageAggregator: MessageAggregator;
   private readonly httpServer: HttpServer;
   private readonly agentGraph: CompiledAgentGraph;
@@ -43,13 +43,7 @@ export class App {
       logger
     );
 
-    this.debounceController = new DebounceController(
-      {
-        debounceMs: config.pipeline.debounceMs,
-        maxWaitMs: config.pipeline.maxWaitMs,
-      },
-      logger
-    );
+    this.messageQueue = new MessageQueue();
 
     this.messageAggregator = new MessageAggregator();
 
@@ -94,15 +88,23 @@ export class App {
   }
 
   private setupMessageHandler(): void {
-    // 消息先进入 debounce 控制器
-    this.webhookHandler.onMessage((message: NormalizedMessage) => {
-      this.debounceController.onMessage(message);
-      return Promise.resolve();
-    });
+    this.webhookHandler.onMessage(async (message: NormalizedMessage) => {
+      // 所有消息入队作为历史缓冲
+      this.messageQueue.enqueue(message);
+      this.logger.debug('Message buffered', {
+        messageId: message.messageId,
+        queueSize: this.messageQueue.size(),
+        isMentionBot: message.isMentionBot,
+      });
 
-    // 当 debounce 触发时，聚合消息并处理
-    this.debounceController.onTrigger(async (messages: NormalizedMessage[]) => {
-      await this.handleMessages(messages);
+      // 仅当 @bot 时 flush 全部历史消息并触发处理
+      if (message.isMentionBot) {
+        const messages = this.messageQueue.flush();
+        this.logger.info('Mention detected, flushing queue', {
+          messageCount: messages.length,
+        });
+        await this.handleMessages(messages);
+      }
     });
   }
 
@@ -133,6 +135,14 @@ export class App {
     // 处理消息并生成回复
     const replyText = await this.processMessages(aggregated);
 
+    // 空响应表示不需要回复（ignore 意图）
+    if (!replyText) {
+      this.logger.info('No reply needed (ignore intent)', {
+        messageCount: aggregated.count,
+      });
+      return;
+    }
+
     // 发送回复
     try {
       // 由于 handleMessages 开头已经检查了 messages.length === 0，这里 firstMessage 必定存在
@@ -162,7 +172,7 @@ export class App {
       ? firstMessage.groupId!
       : firstMessage.userId;
 
-    const feedbackText = `收到 ${aggregated.count} 条消息，正在处理...`;
+    const feedbackText = '收到，让我看下...';
 
     try {
       await this.oneBotClient.sendMsg(
@@ -191,6 +201,11 @@ export class App {
 
       if (result.error) {
         this.logger.warn('Agent graph returned error', { error: result.error });
+      }
+
+      // 空字符串表示 ignore 意图，不使用 fallback
+      if (result.response === '') {
+        return '';
       }
 
       return result.response ?? '抱歉，我没有生成回复。';
@@ -232,8 +247,8 @@ export class App {
     this.isShuttingDown = true;
     this.logger.info('Stopping application');
 
-    // 停止 debounce 控制器
-    this.debounceController.stop();
+    // 清空消息队列
+    this.messageQueue.clear();
 
     await this.httpServer.stop();
 

@@ -21,6 +21,7 @@ function createTestMessage(
     nickname,
     timestamp: new Date(timestamp ?? Date.now()),
     attachments,
+    isMentionBot: false,
   };
 }
 

@@ -8,6 +8,27 @@ import { createChatExecutorNode } from './nodes/chat-executor.js';
 import type { Logger } from '../logger/logger.js';
 import type { ModelRegistry } from '../ai/model-registry.js';
 
+/**
+ * Intent 路由条件函数
+ *
+ * ignore 意图直接跳过后续处理
+ */
+function routeAfterIntent(state: AgentStateType): 'ignore' | 'continue' {
+  if (state.intent?.type === 'ignore') {
+    return 'ignore';
+  }
+  return 'continue';
+}
+
+/**
+ * Ignore 处理节点 - 设置空响应
+ */
+function createIgnoreNode() {
+  return async (_state: AgentStateType): Promise<Partial<AgentStateType>> => {
+    return { response: '' };
+  };
+}
+
 export interface AgentGraphConfig {
   models: ModelRegistry;
   logger: Logger;
@@ -49,6 +70,7 @@ export function createAgentGraph(config: AgentGraphConfig) {
   // 创建各个节点
   const summaryNode = createSummaryNode(fastModel);
   const intentNode = createIntentNode(primaryModel);
+  const ignoreNode = createIgnoreNode();
   const planNode = createPlanNode(primaryModel);
   const routerNode = createRouterNode();
   const chatExecutorNode = createChatExecutorNode(primaryModel);
@@ -80,13 +102,18 @@ export function createAgentGraph(config: AgentGraphConfig) {
   const graph = new StateGraph(AgentState)
     .addNode('summarizer', wrapNode('summarizer', summaryNode))
     .addNode('intentRecognizer', wrapNode('intentRecognizer', intentNode))
+    .addNode('ignoreHandler', wrapNode('ignoreHandler', ignoreNode))
     .addNode('planner', wrapNode('planner', planNode))
     .addNode('router', wrapNode('router', routerNode))
     .addNode('chatExecutor', wrapNode('chatExecutor', chatExecutorNode))
-    // 边：summarizer -> intentRecognizer -> planner -> router -> executor -> END
+    // 边：summarizer -> intentRecognizer -> (ignore? -> END : planner -> router -> executor -> END)
     .addEdge('__start__', 'summarizer')
     .addEdge('summarizer', 'intentRecognizer')
-    .addEdge('intentRecognizer', 'planner')
+    .addConditionalEdges('intentRecognizer', routeAfterIntent, {
+      ignore: 'ignoreHandler',
+      continue: 'planner',
+    })
+    .addEdge('ignoreHandler', END)
     .addEdge('planner', 'router')
     .addConditionalEdges('router', routeToExecutor, {
       chat: 'chatExecutor',

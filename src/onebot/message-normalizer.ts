@@ -10,6 +10,7 @@ export interface NormalizedMessage {
   timestamp: Date;
   isGroup: boolean;
   attachments: Attachment[];
+  isMentionBot: boolean;
 }
 
 /** OneBot 段类型到附件类型的映射 */
@@ -89,20 +90,32 @@ export function guessMimeType(filename: string, attachmentType: AttachmentType):
 interface ExtractedContent {
   text: string;
   attachments: Attachment[];
+  isMentionBot: boolean;
 }
 
-function extractContent(message: string | OneBotMessageSegment[]): ExtractedContent {
+function extractContent(message: string | OneBotMessageSegment[], selfId?: number): ExtractedContent {
   if (typeof message === 'string') {
-    return { text: message, attachments: [] };
+    return { text: message, attachments: [], isMentionBot: false };
   }
 
   const textParts: string[] = [];
   const attachments: Attachment[] = [];
+  let isMentionBot = false;
 
   for (const seg of message) {
     if (seg.type === 'text') {
       textParts.push(String(seg.data['text'] ?? ''));
       continue;
+    }
+
+    // 检测 @bot 段
+    if (seg.type === 'at' && selfId !== undefined) {
+      const qq = seg.data['qq'];
+      if (String(qq) === String(selfId)) {
+        isMentionBot = true;
+        // 不将 @bot 文本加入 textParts
+        continue;
+      }
     }
 
     const attachmentType = SEGMENT_TYPE_MAP[seg.type];
@@ -129,12 +142,13 @@ function extractContent(message: string | OneBotMessageSegment[]): ExtractedCont
   }
 
   return {
-    text: textParts.join(''),
+    text: textParts.join('').trim(),
     attachments,
+    isMentionBot,
   };
 }
 
-export function normalizeMessage(event: OneBotEvent): NormalizedMessage | null {
+export function normalizeMessage(event: OneBotEvent, selfId?: number): NormalizedMessage | null {
   if (event.post_type !== 'message') {
     return null;
   }
@@ -143,7 +157,7 @@ export function normalizeMessage(event: OneBotEvent): NormalizedMessage | null {
     return null;
   }
 
-  const { text, attachments } = extractContent(event.message ?? '');
+  const { text, attachments, isMentionBot } = extractContent(event.message ?? '', selfId);
 
   return {
     messageId: event.message_id,
@@ -155,5 +169,6 @@ export function normalizeMessage(event: OneBotEvent): NormalizedMessage | null {
     timestamp: new Date(event.time * 1000),
     isGroup: event.message_type === 'group',
     attachments,
+    isMentionBot,
   };
 }

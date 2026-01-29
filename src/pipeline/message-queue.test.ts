@@ -13,6 +13,7 @@ function createTestMessage(id: number, text: string): NormalizedMessage {
     nickname: 'TestUser',
     timestamp: new Date(),
     attachments: [],
+    isMentionBot: false,
   };
 }
 

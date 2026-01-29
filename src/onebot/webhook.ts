@@ -67,7 +67,7 @@ export class WebhookHandler {
       }
     }
 
-    const normalized = normalizeMessage(event);
+    const normalized = normalizeMessage(event, this.selfId);
     if (!normalized) {
       this.logger.warn('Failed to normalize message');
       return;

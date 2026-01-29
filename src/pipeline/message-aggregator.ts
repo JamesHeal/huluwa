@@ -112,9 +112,10 @@ export class MessageAggregator {
       attachments.push(...msg.attachments);
     }
 
-    // 格式化对话文本（含附件标注）
+    // 格式化对话文本（含附件标注和 @bot 标记）
     const formattedLines = messages.map((msg) => {
-      let line = `[${msg.nickname}] ${msg.text}`;
+      const mentionTag = msg.isMentionBot ? ' [→@我]' : '';
+      let line = `[${msg.nickname}]${mentionTag} ${msg.text}`;
       for (const att of msg.attachments) {
         line += ` [${att.type}: ${att.filename}]`;
       }
